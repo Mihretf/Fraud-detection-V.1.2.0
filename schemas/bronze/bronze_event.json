@@ -1,0 +1,9 @@
+{
+  "bank_id": "string",
+  "channel": "string",
+  "raw_payload": "dict",
+  "ingest_time": "timestamp",
+  "source_event_id": "string|null",
+  "source_file": "string|null",
+  "extra_metadata": "dict|null"
+}

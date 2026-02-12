@@ -1,0 +1,14 @@
+{
+  "bank_id": "string",
+  "channel": "string",
+  "transaction_id": "string",
+  "amount": "float",
+  "currency": "string",
+  "transaction_time": "timestamp",
+  "status": "string",
+  "account_id": "string|null",
+  "merchant_id": "string|null",
+  "raw_event_ref": "string",
+  "created_at": "timestamp",
+  "extra_attributes": "dict|null"
+}

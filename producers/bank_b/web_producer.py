@@ -3,22 +3,19 @@ import json
 from datetime import datetime
 from generators.transaction_generator import TransactionGenerator
 
-# Directory to store Bronze events
-BRONZE_DIR = "../../storage/bronze/bank_a/atm"
+BRONZE_DIR = "../../storage/bronze/bank_b/web"
 os.makedirs(BRONZE_DIR, exist_ok=True)
 
-class ATMProducer:
-    def __init__(self, bank_id="BANK_A", channel="ATM", batch_size=10):
+class WebProducerB:
+    def __init__(self, bank_id="BANK_B", channel="WEB", batch_size=10):
         self.bank_id = bank_id
         self.channel = channel
         self.batch_size = batch_size
         self.generator = TransactionGenerator(bank_id=bank_id, channel=channel)
 
     def produce_batch(self):
-        """Generate and store a batch of Bronze events"""
-        events = self.generator.generate_batch(n=self.batch_size)
+        events = self.generator.generate_batch(n=self.batch_size, random_errors=True)
         for event in events:
-            # Use timestamp + source_event_id as filename
             ts = datetime.utcnow().strftime("%Y%m%d%H%M%S%f")
             filename = f"{BRONZE_DIR}/{self.bank_id}_{self.channel}_{ts}.json"
             with open(filename, "w") as f:
@@ -26,7 +23,6 @@ class ATMProducer:
         print(f"{len(events)} events produced to {BRONZE_DIR}")
 
 
-# Example usage
 if __name__ == "__main__":
-    producer = ATMProducer(batch_size=5)
+    producer = WebProducerB(batch_size=5)
     producer.produce_batch()
