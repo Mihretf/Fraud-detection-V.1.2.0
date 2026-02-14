@@ -1,0 +1,16 @@
+{
+  "bank_id": "BANK_A",
+  "channel": "MOBILE",
+  "raw_payload": {
+    "atmCode": "A24",
+    "trxAmt": "2927.14",
+    "trxTime": "13/02/26 23:04",
+    "cardNumber": "****5001"
+  },
+  "ingest_time": "2026-02-14T09:08:40.390144",
+  "source_event_id": "BANK_A_MOBILE_26bf2ac8",
+  "extra_metadata": {
+    "branch_id": "B20",
+    "device_status": "WARN"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "bank_id": "BANK_C",
+  "channel": "MOBILE",
+  "raw_payload": {
+    "atmCode": "A49",
+    "trxAmt": "4683.11",
+    "trxTime": "13/02/26 14:01",
+    "cardNumber": "****6718"
+  },
+  "ingest_time": "2026-02-14T09:08:40.464326",
+  "source_event_id": "BANK_C_MOBILE_5ef5c646",
+  "extra_metadata": {
+    "branch_id": "B20",
+    "device_status": "OK"
+  }
+}

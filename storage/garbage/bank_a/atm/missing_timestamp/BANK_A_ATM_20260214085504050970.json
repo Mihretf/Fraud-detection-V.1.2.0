@@ -1,0 +1,16 @@
+{
+  "bank_id": "BANK_A",
+  "channel": "ATM",
+  "raw_payload": {
+    "atmCode": "A14",
+    "trxAmt": "3544.97",
+    "trxTime": "13/02/26 12:30",
+    "cardNumber": "****3525"
+  },
+  "ingest_time": "2026-02-14T08:55:04.045975",
+  "source_event_id": "BANK_A_ATM_a9cb283f",
+  "extra_metadata": {
+    "branch_id": "B11",
+    "device_status": "OK"
+  }
+}

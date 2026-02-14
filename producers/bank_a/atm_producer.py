@@ -1,11 +1,14 @@
 import os
+from pathlib import Path
 import json
 from datetime import datetime
 from generators.transaction_generator import TransactionGenerator
 
-# Directory to store Bronze events
-BRONZE_DIR = "../../storage/bronze/bank_a/atm"
-os.makedirs(BRONZE_DIR, exist_ok=True)
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+
+# ATM
+BRONZE_DIR = PROJECT_ROOT / "storage" / "bronze" / "bank_a" / "atm"
+BRONZE_DIR.mkdir(parents=True, exist_ok=True)
 
 class ATMProducer:
     def __init__(self, bank_id="BANK_A", channel="ATM", batch_size=10):

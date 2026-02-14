@@ -1,0 +1,16 @@
+{
+  "bank_id": "BANK_A",
+  "channel": "WEB",
+  "raw_payload": {
+    "atmCode": "A31",
+    "trxAmt": "2444.19",
+    "trxTime": "13/02/26 09:39",
+    "cardNumber": "****4250"
+  },
+  "ingest_time": "2026-02-14T09:08:40.379608",
+  "source_event_id": "BANK_A_WEB_67029568",
+  "extra_metadata": {
+    "branch_id": "B9",
+    "device_status": "OK"
+  }
+}

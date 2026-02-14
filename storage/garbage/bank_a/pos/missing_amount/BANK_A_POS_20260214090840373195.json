@@ -1,0 +1,16 @@
+{
+  "bank_id": "BANK_A",
+  "channel": "POS",
+  "raw_payload": {
+    "atmCode": "A29",
+    "trxAmt": "372.12",
+    "trxTime": "14/02/26 00:11",
+    "cardNumber": "****9491"
+  },
+  "ingest_time": "2026-02-14T09:08:40.371173",
+  "source_event_id": "BANK_A_POS_d3392a16",
+  "extra_metadata": {
+    "branch_id": "B18",
+    "device_status": "OK"
+  }
+}

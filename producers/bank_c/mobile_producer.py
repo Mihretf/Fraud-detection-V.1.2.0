@@ -1,10 +1,13 @@
 import os
+from pathlib import Path
 import json
 from datetime import datetime
 from generators.transaction_generator import TransactionGenerator
 
-BRONZE_DIR = "../../storage/bronze/bank_c/mobile"
-os.makedirs(BRONZE_DIR, exist_ok=True)
+# Use the project root as base
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent  # go up 3 levels from this file
+BRONZE_DIR = PROJECT_ROOT / "storage" / "bronze" / "bank_c" / "mobile"
+BRONZE_DIR.mkdir(parents=True, exist_ok=True)
 
 class MobileProducerC:
     def __init__(self, bank_id="BANK_C", channel="MOBILE", batch_size=10):
@@ -14,7 +17,7 @@ class MobileProducerC:
         self.generator = TransactionGenerator(bank_id=bank_id, channel=channel)
 
     def produce_batch(self):
-        events = self.generator.generate_batch(n=self.batch_size, random_errors=True)
+        events = self.generator.generate_batch(n=self.batch_size, dirty_ratio=0.3)
         for event in events:
             ts = datetime.utcnow().strftime("%Y%m%d%H%M%S%f")
             filename = f"{BRONZE_DIR}/{self.bank_id}_{self.channel}_{ts}.json"
