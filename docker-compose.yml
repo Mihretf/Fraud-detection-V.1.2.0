@@ -1,9 +1,48 @@
-version: '3.9'
-
 services:
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    container_name: zookeeper
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: bitnami/kafka:latest
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - ALLOW_PLAINTEXT_LISTENER=yes
+
   fraud_pipeline:
     build: .
     container_name: fraud_pipeline
+    depends_on:
+      - kafka
     volumes:
       - ./storage:/app/storage  # persist data outside container
     command: python -m pipelines.run_pipeline
+
+  namenode:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: namenode
+    ports:
+      - "9000:9000"
+      - "9870:9870"
+    environment:
+      - CLUSTER_NAME=test
+
+  datanode:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: datanode
+    ports:
+      - "9864:9864"
+      - "9866:9866"
+    environment:
+      - CLUSTER_NAME=test
