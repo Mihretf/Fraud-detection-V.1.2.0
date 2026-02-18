@@ -1,0 +1,9 @@
+version: '3.9'
+
+services:
+  fraud_pipeline:
+    build: .
+    container_name: fraud_pipeline
+    volumes:
+      - ./storage:/app/storage  # persist data outside container
+    command: python -m pipelines.run_pipeline
