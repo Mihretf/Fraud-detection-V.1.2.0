@@ -1,7 +1,7 @@
 import sys
 from producers.bank_a.atm_producer import ATMProducer as ATMProducerA
-from producers.bank_a.pos_producer import POSProducer as POSProducerA
-from producers.bank_a.web_producer import WebProducer as WEBProducerA
+from producers.bank_a.pos_producer import POSProducerA
+from producers.bank_a.web_producer import WebProducerA
 from producers.bank_a.mobile_producer import MobileProducer as MobileProducerA
 
 from producers.bank_b.atm_producer import ATMProducerB
@@ -24,7 +24,7 @@ def run_full_pipeline(batch_size=10):
     # Bank A
     ATMProducerA(batch_size=batch_size).produce_batch()
     POSProducerA(batch_size=batch_size).produce_batch()
-    WEBProducerA(batch_size=batch_size).produce_batch()
+    WebProducerA(batch_size=batch_size).produce_batch()
     MobileProducerA(batch_size=batch_size).produce_batch()
 
     # Bank B
