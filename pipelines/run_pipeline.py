@@ -1,4 +1,4 @@
-import sys
+import time
 from producers.bank_a.atm_producer import ATMProducer as ATMProducerA
 from producers.bank_a.pos_producer import POSProducerA
 from producers.bank_a.web_producer import WebProducerA
@@ -7,7 +7,7 @@ from producers.bank_a.mobile_producer import MobileProducer as MobileProducerA
 from producers.bank_b.atm_producer import ATMProducerB
 from producers.bank_b.pos_producer import POSProducerB
 from producers.bank_b.web_producer import WebProducerB
-from producers.bank_b.mobile_producer import  MobileProducerB
+from producers.bank_b.mobile_producer import MobileProducerB
 
 from producers.bank_c.atm_producer import ATMProducerC
 from producers.bank_c.pos_producer import POSProducerC
@@ -17,9 +17,7 @@ from producers.bank_c.mobile_producer import MobileProducerC
 from pipelines.bronze_to_silver import run_etl
 
 def run_full_pipeline(batch_size=10):
-    print("=== Starting full pipeline ===")
-
-    print("Producing Bronze events for all banks/channels...")
+    print("=== Producing Bronze events for all banks/channels ===")
 
     # Bank A
     ATMProducerA(batch_size=batch_size).produce_batch()
@@ -43,7 +41,12 @@ def run_full_pipeline(batch_size=10):
     print("Running Bronze -> Silver ETL...")
     run_etl()
 
-    print("=== Pipeline complete ===")
-
 if __name__ == "__main__":
-    run_full_pipeline(batch_size=10)
+    batch_size = 10       # number of transactions per batch
+    interval_sec = 5      # time between batches (adjust as needed)
+
+    print("=== Starting streaming pipeline ===")
+    while True:
+        run_full_pipeline(batch_size=batch_size)
+        print(f"Sleeping for {interval_sec}s before next batch...")
+        time.sleep(interval_sec)

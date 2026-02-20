@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+
+# Local storage
+storage/
+*.log
+
+# Environment / virtualenv
+venv/
+.env
+
+# Docker
+*.pid
+*.sock
+docker-compose.override.yml
+
+# OS files
+.DS_Store
+Thumbs.db

@@ -3,7 +3,7 @@ from generators.transaction_generator import TransactionGenerator
 from datetime import datetime
 import json
 
-KAFKA_BOOTSTRAP = "localhost:9092"
+KAFKA_BOOTSTRAP = "kafka:9092"
 TOPIC = "bank_a_web_transactions"
 
 class WebProducerA:
