@@ -21,3 +21,38 @@ docker-compose.override.yml
 # OS files
 .DS_Store
 Thumbs.db
+
+
+# --- OS & IDE Files ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# --- Python & Spark ---
+__pycache__/
+*.py[cod]
+*$py.class
+.ipynb_checkpoints/
+.venv/
+venv/
+env/
+# Ignore Spark/Hadoop logs and Ivy dependencies
+.ivy2/
+metastore_db/
+spark-warehouse/
+derby.log
+*.log
+
+# --- Project Specific Data ---
+# Ignore the actual transaction data and checkpoints
+storage/
+fraud_detection/
+checkpoint/
+checkpoints/
+
+# --- Docker ---
+.env
+# Ignore local DB volumes if you add them later
+docker_volumes/

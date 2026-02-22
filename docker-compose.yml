@@ -42,7 +42,38 @@ services:
   #     JVM_OPTS: "-Xms32M -Xmx64M"
   #   ports:
   #     - "9000:9000"
+  spark:
+    image: spark:3.5.7-java17-python3
+    container_name: spark
+    user: root
+    environment:
+      - SPARK_MODE=master
+      - SPARK_MASTER_HOST=spark
+      - SPARK_MASTER_PORT=7077
+    ports:
+      - "8080:8080"
+      - "7077:7077"
+    volumes:
+      - ./spark_jobs:/app/spark_jobs
+    tty: true
+    stdin_open: true
+    # Force the master to bind to 0.0.0.0 so workers can connect
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master --host spark
 
+  spark-worker:
+    image: spark:3.5.7-java17-python3
+    container_name: spark-worker
+    depends_on:
+      - spark
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark:7077
+      - SPARK_WORKER_CORES=1
+      - SPARK_WORKER_MEMORY=1G
+    volumes:
+      - ./spark_jobs:/app/spark_jobs
+    # Explicitly tell the worker where the master is
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark:7077
   namenode:
     image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
     container_name: namenode
@@ -50,15 +81,16 @@ services:
       - "9000:9000"
       - "9870:9870"
     environment:
-      CLUSTER_NAME: test
-
+      - CLUSTER_NAME=test
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:8020
   datanode:
     image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
     container_name: datanode
-    ports:
-      - "9864:9864"
-      - "9866:9866"
-    environment:
-      CLUSTER_NAME: test
     depends_on:
       - namenode
+    environment:
+      - CLUSTER_NAME=test
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:8020
+      - SERVICE_PRECONDITION=namenode:9870 # Ensures datanode waits for namenode UI
+    ports:
+      - "9864:9864"

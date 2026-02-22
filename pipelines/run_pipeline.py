@@ -14,9 +14,7 @@ from producers.bank_c.pos_producer import POSProducerC
 from producers.bank_c.web_producer import WebProducerC
 from producers.bank_c.mobile_producer import MobileProducerC
 
-from pipelines.bronze_to_silver import run_etl
-
-def run_full_pipeline(batch_size=10):
+def run_bronze_pipeline(batch_size=10):
     print("=== Producing Bronze events for all banks/channels ===")
 
     # Bank A
@@ -37,16 +35,12 @@ def run_full_pipeline(batch_size=10):
     WebProducerC(batch_size=batch_size).produce_batch()
     MobileProducerC(batch_size=batch_size).produce_batch()
 
-    # Run ETL for all Bronze events
-    print("Running Bronze -> Silver ETL...")
-    run_etl()
-
 if __name__ == "__main__":
     batch_size = 10       # number of transactions per batch
     interval_sec = 5      # time between batches (adjust as needed)
 
-    print("=== Starting streaming pipeline ===")
+    print("=== Starting Bronze-only streaming pipeline ===")
     while True:
-        run_full_pipeline(batch_size=batch_size)
+        run_bronze_pipeline(batch_size=batch_size)
         print(f"Sleeping for {interval_sec}s before next batch...")
         time.sleep(interval_sec)
