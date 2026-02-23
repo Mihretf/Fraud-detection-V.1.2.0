@@ -183,11 +183,27 @@ This is effectively the **“single pane of glass”** for demoing the pipeline.
 Even though the current implementation focuses primarily on **Bronze** and **Silver**, the structure is **Gold-ready**.
 
 ```mermaid
-graph TD
-    subgraph Storage_Layout
-        BZ[Bronze<br/>Raw Kafka payloads<br/>schema-on-read] --> SV[Silver<br/>Clean, standardized<br/>PII-masked]
-        SV --> GD[Gold (Future)<br/>Curated, business-ready<br/>aggregates & features]
-        SV --> GB[Garbage / DLO<br/>Rejected & bad records]
+graph TB
+    subgraph "Data Ingestion"
+        P_ATM[ATM Producers<br/>(Bank A/B/C)] --> K[Kafka Topics<br/>bank_*_transactions]
+        P_POS[POS Producers<br/>(Bank A/B/C)] --> K
+        P_WEB[Web & Mobile Producers<br/>(Bank A/B/C)] --> K
+    end
+
+    subgraph "Bronze Layer (Raw)"
+        K --> BR[HDFS /fraud_detection/bronze/transactions<br/>Parquet<br/>raw_payload + metadata]
+    end
+
+    subgraph "Silver Layer (Clean)"
+        BR --> SJOB[Spark Job: bronze_to_silver.py<br/>parse + validate + mask PII]
+        SJOB --> SV[HDFS /fraud_detection/silver/transactions<br/>Standardized schema<br/>partitioned by bank/channel]
+        SJOB --> GB[HDFS /fraud_detection/garbage/rejected<br/>Dead Letter / bad records]
+    end
+
+    subgraph "Serving & Visualization"
+        SV --> DASH[Streamlit Dashboard<br/>Pipeline Monitoring & Exploration]
+        BR --> DASH
+        GB --> DASH
     end
 ```
 
