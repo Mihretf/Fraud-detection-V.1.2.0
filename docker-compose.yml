@@ -74,6 +74,18 @@ services:
       - ./spark_jobs:/app/spark_jobs
     # Explicitly tell the worker where the master is
     command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark:7077
+
+  dashboard:
+    image: spark:3.5.7-java17-python3
+    container_name: fraud_dashboard
+    volumes:
+      - .:/app
+    ports:
+      - "8501:8501"
+    environment:
+      - SPARK_MASTER=spark://spark:7077
+    command: tail -f /dev/null
+    
   namenode:
     image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
     container_name: namenode
