@@ -50,7 +50,7 @@ Conceptually, the platform looks like this:
 
 ```mermaid
 flowchart LR
-    subgraph Banks & Channels
+    subgraph Banks_and_Channels
         TG[Transaction Generator] --> P_A[Bank A Producers]
         TG --> P_B[Bank B Producers]
         TG --> P_C[Bank C Producers]
@@ -60,14 +60,14 @@ flowchart LR
     P_B --> K
     P_C --> K
 
-    K --> S1[Spark Job: Kafka → Bronze (HDFS)]
-    S1 --> BZ[(Bronze Layer\nHDFS Parquet)]
+    K --> S1[Spark Job: Kafka to Bronze (HDFS)]
+    S1 --> BZ[(Bronze Layer<br/>HDFS Parquet)]
 
-    BZ --> S2[Spark Job: Bronze → Silver + Garbage]
-    S2 --> SV[(Silver Layer\nHDFS Parquet)]
-    S2 --> GB[(Garbage / Dead Letter\nHDFS JSON)]
+    BZ --> S2[Spark Job: Bronze to Silver + Garbage]
+    S2 --> SV[(Silver Layer<br/>HDFS Parquet)]
+    S2 --> GB[(Garbage / Dead Letter<br/>HDFS JSON)]
 
-    SV --> UI[Streamlit Dashboard]
+    SV --> UI[Streamlit Dashboard UI]
     BZ --> UI
     GB --> UI
 ```
@@ -184,10 +184,10 @@ Even though the current implementation focuses primarily on **Bronze** and **Sil
 
 ```mermaid
 graph TD
-    subgraph Storage Layout
-        BZ[Bronze\nRaw Kafka payloads\nschema-on-read] --> SV[Silver\nClean, standardized\nPII-masked]
-        SV --> GD[Gold (Future)\nCurated, business-ready\naggregates & features]
-        SV --> GB[Garbage / DLO\nRejected & bad records]
+    subgraph Storage_Layout
+        BZ[Bronze<br/>Raw Kafka payloads<br/>schema-on-read] --> SV[Silver<br/>Clean, standardized<br/>PII-masked]
+        SV --> GD[Gold (Future)<br/>Curated, business-ready<br/>aggregates & features]
+        SV --> GB[Garbage / DLO<br/>Rejected & bad records]
     end
 ```
 
@@ -404,16 +404,6 @@ This project is intentionally modular so you can extend it for more advanced dem
 
 ---
 
-## Using This README in a Presentation
 
-Suggested narrative flow:
-
-1. **Start with the High-Level Architecture diagram** to orient the audience.
-2. **Walk through the Data Flow** section to explain each step (generator → producers → Kafka → Spark → HDFS → Streamlit).
-3. **Explain the Medallion Architecture** and why Bronze/Silver/Gold/Dead Letter are important in modern data platforms.
-4. **Dive into the ETL & Quality Rules** to show how the system handles bad data and protects PII.
-5. **Switch to the Streamlit Dashboard live** and tie each visual element back to the architecture shown in this README.
-
-You can keep this README open as your **speaker notes** while presenting, using the diagrams and bullet points as prompts.
 
 
