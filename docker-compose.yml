@@ -1,4 +1,6 @@
+version: '3.8'
 services:
+  # --- INFRASTRUCTURE: ZOOKEEPER & KAFKA ---
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.0
     container_name: zookeeper
@@ -22,6 +24,105 @@ services:
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
 
+  # --- STORAGE: HDFS ---
+  namenode:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: namenode
+    ports:
+      - "8020:8020"
+      - "9870:9870"
+    environment:
+      - CLUSTER_NAME=test
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:8020
+      - HDFS_CONF_dfs_permissions_enabled=false
+
+  datanode:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: datanode
+    depends_on:
+      - namenode
+    environment:
+      - CLUSTER_NAME=test
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:8020
+      - SERVICE_PRECONDITION=namenode:9870
+    ports:
+      - "9864:9864"
+
+  # --- PROCESSING: SPARK ---
+  spark:
+    image: spark:3.5.7-java17-python3
+    container_name: spark
+    user: root
+    environment:
+      - SPARK_MODE=master
+    ports:
+      - "8081:8080" 
+      - "7077:7077"
+    volumes:
+      - ./spark_jobs:/app/spark_jobs
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master --host spark
+
+  spark-worker:
+    image: spark:3.5.7-java17-python3
+    depends_on:
+      - spark
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark:7077
+      - SPARK_WORKER_CORES=2
+      - SPARK_WORKER_MEMORY=2G
+    volumes:
+      - ./spark_jobs:/app/spark_jobs
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark:7077
+
+  # --- ORCHESTRATION: AIRFLOW ---
+  airflow-db:
+    image: postgres:13
+    container_name: airflow_postgres
+    environment:
+      - POSTGRES_USER=airflow
+      - POSTGRES_PASSWORD=airflow
+      - POSTGRES_DB=airflow
+    ports:
+      - "5432:5432"
+
+  airflow-webserver:
+    build:
+      context: .
+      dockerfile: Dockerfile.airflow
+    container_name: airflow_webserver
+    depends_on:
+      - airflow-db
+    environment:
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./spark_jobs:/opt/airflow/jobs    
+    command: >
+      bash -c "airflow db migrate && 
+      airflow users create --username admin --firstname Barney --lastname Mercy --role Admin --email admin@example.com --password admin || true && 
+      airflow webserver"
+
+  airflow-scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile.airflow
+    container_name: airflow_scheduler
+    depends_on:
+      - airflow-webserver
+    environment:
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./spark_jobs:/opt/airflow/jobs
+    command: scheduler
+
+  # --- DASHBOARD & PIPELINES ---
   fraud_pipeline:
     build: .
     container_name: fraud_pipeline
@@ -31,49 +132,6 @@ services:
       - ./storage:/app/storage
       - ./:/app
     command: python -m pipelines.run_pipeline
-
-  # kafdrop:
-  #   image: obsidiandynamics/kafdrop
-  #   container_name: kafdrop
-  #   depends_on:
-  #     - kafka
-  #   environment:
-  #     KAFKA_BROKERCONNECT: kafka:9092
-  #     JVM_OPTS: "-Xms32M -Xmx64M"
-  #   ports:
-  #     - "9000:9000"
-  spark:
-    image: spark:3.5.7-java17-python3
-    container_name: spark
-    user: root
-    environment:
-      - SPARK_MODE=master
-      - SPARK_MASTER_HOST=spark
-      - SPARK_MASTER_PORT=7077
-    ports:
-      - "8080:8080"
-      - "7077:7077"
-    volumes:
-      - ./spark_jobs:/app/spark_jobs
-    tty: true
-    stdin_open: true
-    # Force the master to bind to 0.0.0.0 so workers can connect
-    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master --host spark
-
-  spark-worker:
-    image: spark:3.5.7-java17-python3
-    # container_name: spark-worker
-    depends_on:
-      - spark
-    environment:
-      - SPARK_MODE=worker
-      - SPARK_MASTER_URL=spark://spark:7077
-      - SPARK_WORKER_CORES=1
-      - SPARK_WORKER_MEMORY=1G
-    volumes:
-      - ./spark_jobs:/app/spark_jobs
-    # Explicitly tell the worker where the master is
-    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark:7077
 
   dashboard:
     image: spark:3.5.7-java17-python3
@@ -85,24 +143,3 @@ services:
     environment:
       - SPARK_MASTER=spark://spark:7077
     command: tail -f /dev/null
-    
-  namenode:
-    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
-    container_name: namenode
-    ports:
-      - "9000:9000"
-      - "9870:9870"
-    environment:
-      - CLUSTER_NAME=test
-      - CORE_CONF_fs_defaultFS=hdfs://namenode:8020
-  datanode:
-    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
-    container_name: datanode
-    depends_on:
-      - namenode
-    environment:
-      - CLUSTER_NAME=test
-      - CORE_CONF_fs_defaultFS=hdfs://namenode:8020
-      - SERVICE_PRECONDITION=namenode:9870 # Ensures datanode waits for namenode UI
-    ports:
-      - "9864:9864"
