@@ -72,5 +72,33 @@ final_silver.filter(col("quality_score") != "CLEAN") \
     .mode("append") \
     .json("hdfs://namenode:8020/fraud_detection/garbage/rejected")
 
-print("Pipeline Finished Successfully.")
+
+
+# 7. KAFKA EGRESS (Pushing Cleaned Data to Bilise)
+print("Streaming cleaned data to Kafka for ML inference...")
+
+# We only send CLEAN data. We wrap all columns into a JSON 'value'
+kafka_output_df = final_silver.filter(col("quality_score") == "CLEAN") \
+    .selectExpr("CAST(transaction_id AS STRING) AS key", "to_json(struct(*)) AS value")
+
+kafka_output_df.write \
+    .format("kafka") \
+    .option("kafka.bootstrap.servers", "kafka:9092") \
+    .option("topic", "cleaned_transactions_for_ml") \
+    .save()
+
+
+# --- STEP 8: EXPORT FOR BILISE (Local File) ---
+print("Exporting cleaned data for Bilise...")
+
+# We use coalesce(1) to make sure it's ONE file, not 20 small ones
+# We save it to a path that is mapped to your local Windows folders
+final_silver.filter(col("quality_score") == "CLEAN") \
+    .coalesce(1) \
+    .write \
+    .mode("overwrite") \
+    .option("header", "true") \
+    .csv("/app/storage/silver_export_for_bilise")
+
+print("🚀 Pipeline Finished & Data Streamed to Kafka Successfully.")
 spark.stop()

@@ -2,9 +2,9 @@ import sys
 import os
 import streamlit as st
 import pandas as pd
+from datetime import datetime
 
-# --- 1. SMART SPARK LOADER (Fixes ModuleNotFoundError) ---
-# This ensures Streamlit can find Spark regardless of the Docker image layout
+# --- 1. SMART SPARK LOADER ---
 possible_spark_paths = ["/opt/spark/python", "/opt/bitnami/spark/python"]
 for path in possible_spark_paths:
     if os.path.exists(path):
@@ -16,11 +16,12 @@ for path in possible_spark_paths:
                     sys.path.insert(0, os.path.join(lib_path, file))
 
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col
+from pyspark.sql.functions import col, max as spark_max
 
 # --- 2. STREAMLIT UI CONFIG ---
-st.set_page_config(layout="wide", page_title="Fraud Pipeline Monitor")
+st.set_page_config(layout="wide", page_title="AAU Fraud Pipeline Monitor")
 st.title("🛡️ Real-Time Fraud Pipeline Monitor")
+st.markdown(f"**Status:** `Active` | **Node:** `AAU-Data-Cluster` | **Engineer:** Barnabas")
 st.markdown("---")
 
 # --- 3. SPARK SESSION INITIALIZATION ---
@@ -35,7 +36,6 @@ spark = get_spark()
 
 # --- 4. DATA LOADING LOGIC ---
 def load_data():
-    """Reads Medallion layers from HDFS. No caching to ensure 'Live' feel."""
     try:
         bronze = spark.read.parquet("hdfs://namenode:8020/fraud_detection/bronze/transactions")
         silver = spark.read.parquet("hdfs://namenode:8020/fraud_detection/silver/transactions")
@@ -43,102 +43,96 @@ def load_data():
         try:
             garbage = spark.read.json("hdfs://namenode:8020/fraud_detection/garbage/rejected")
         except:
-            garbage = None # Case where no rejected data exists yet
+            garbage = None 
             
         return bronze, silver, garbage
     except Exception as e:
-        st.error(f"Waiting for Spark Jobs to create HDFS folders... ({e})")
+        st.error(f"Waiting for Spark Jobs to populate HDFS... (Make sure Airflow has run successfully)")
         st.stop()
 
 df_bronze, df_silver, df_garbage = load_data()
 
 # --- 5. SIDEBAR FILTERS ---
 st.sidebar.header("📊 Global Filters")
-# Extract unique banks for the filter dropdown
 all_banks = df_silver.select("bank_id").distinct().toPandas()["bank_id"].tolist()
 selected_banks = st.sidebar.multiselect("Select Banks", all_banks, default=all_banks)
-
-# Apply filter to the silver dataframe
 df_silver_filt = df_silver.filter(col("bank_id").isin(selected_banks))
 
 # --- 6. TABS FOR VISUALIZATION ---
 tab1, tab2, tab3, tab4 = st.tabs(["🚀 Comparison & Metrics", "🥉 Bronze (Raw)", "🥈 Silver (Cleaned)", "🛑 Garbage"])
 
 with tab1:
-    # Top Row: KPI Metrics
+    # KPI Metrics Row
     st.subheader("Live Pipeline Health")
+    total_bronze = df_bronze.count()
+    total_silver = df_silver.count()
+    health_rate = (total_silver / total_bronze * 100) if total_bronze > 0 else 100
+    
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Total Records", df_silver.count())
-    col2.metric("Active Banks", len(all_banks))
-    col3.metric("Layer Status", "Silver", delta="Stable")
-    col4.metric("Security", "SHA-256", delta="Active")
+    col1.metric("Total Records", total_silver)
+    col2.metric("Data Health", f"{health_rate:.1f}%", delta="Stable")
+    col3.metric("Security", "SHA-256", delta="Masking On")
+    
+    # Calculate Freshness
+    last_processed = df_silver.select(spark_max("processed_at")).collect()[0][0]
+    col4.metric("Last Pulse", last_processed.strftime("%H:%M:%S") if last_processed else "N/A")
     
     st.divider()
 
-    # Middle Row: The Comparison Table
+    # Transformation Proof
     st.subheader("🔄 Transformation Journey (PII Masking Proof)")
-    st.write("Below is a comparison showing the original transaction amount and the masked credit card hash:")
-    
-    # We show a sample of the cleaned data
     comp_view = df_silver_filt.select(
-        "transaction_id", "bank_id", "channel", "amount", "masked_card"
+        "transaction_id", "bank_id", "amount", "masked_card", "quality_score"
     ).limit(10).toPandas()
-    
     st.dataframe(comp_view, use_container_width=True)
 
+    # Bank Distribution Chart
     st.divider()
-
-    # Bottom Row: Bank Distribution Pie Chart
     st.subheader("🏦 Bank Traffic Distribution")
     bank_dist = df_silver.groupBy("bank_id").count().toPandas()
-    
-    # Simple Plotly Chart (Streamlit has built-in support)
     st.plotly_chart({
         "data": [{"values": bank_dist["count"], "labels": bank_dist["bank_id"], "type": "pie", "hole": .4}],
-        "layout": {"title": "Transactions Share per Bank"}
+        "layout": {"title": "Transaction Volume Share"}
     }, use_container_width=True)
 
+    # Schema Mapping Table (For Documentation)
     st.divider()
-    st.subheader("🛠️ Schema Canonization (Structural Mapping)")
-    st.write("This table demonstrates how our pipeline handles **Schema Evolution**. Even with varying source fields, the Silver layer enforces a single source of truth.")
-
-    # Re-organized for a "Source -> Target" visual flow
+    st.subheader("🛠️ Schema Mapping Logic")
     mapping_data = {
-        "Bank Source": ["🏦 Bank Alpha", "🏦 Bank Bravo", "🏦 Bank Charlie"],
-        "RAW: Card Field": ["`card_no`", "`cc_number`", "`card_id`"],
-        "RAW: Amount Field": ["`amt`", "`transaction_val`", "`amount`"],
-        "SILVER: Standard Card": ["✅ `masked_card`", "✅ `masked_card`", "✅ `masked_card`"],
-        "SILVER: Standard Amount": ["✅ `amount`", "✅ `amount`", "✅ `amount`"]
+        "Source Field": ["cardNumber", "trxAmt", "trxTime"],
+        "Transformation": ["SHA-256 Hashing", "Double Casting", "Timestamp Normalization"],
+        "Silver Field": ["✅ masked_card", "✅ amount", "✅ event_timestamp"]
     }
-    
-    # Display as a clean table
     st.table(pd.DataFrame(mapping_data))
-    
-    # Live Schema View with better formatting
-    col_a, col_b = st.columns(2)
-    with col_a:
-        st.info("📂 **Raw Bronze Schema** (Flexible/Messy)")
-        # Showing just the payload part to emphasize the 'messiness'
-        st.code("root\n |-- raw_payload: string (JSON)\n |-- ingest_time: timestamp", language="text")
-    with col_b:
-        st.success("💎 **Standardized Silver Schema** (Strict/Clean)")
-        # Showing the result of your hard work
-        st.code("root\n |-- transaction_id: string\n |-- bank_id: string\n |-- amount: double\n |-- masked_card: string", language="text")
 
 with tab2:
-    st.header("Bronze Layer: Raw Kafka Payloads")
-    st.info("This is the exact data as it arrived from Kafka before processing.")
+    st.header("Bronze Layer: Raw Ingestion")
+    st.info("Direct Parquet read from `hdfs:///fraud_detection/bronze`")
     st.dataframe(df_bronze.limit(20).toPandas(), use_container_width=True)
 
 with tab3:
-    st.header("Silver Layer: Cleaned & Partitioned")
-    st.success(f"Displaying processed data for: {', '.join(selected_banks)}")
-    st.dataframe(df_silver_filt.limit(20).toPandas(), use_container_width=True)
+    st.header("Silver Layer: Delivery & Export")
+    
+    # DELIVERY SECTION FOR BILISE
+    st.warning("🤝 **ML Handover Ready**")
+    csv_export = df_silver_filt.toPandas().to_csv(index=False).encode('utf-8')
+    
+    st.download_button(
+        label="📥 Download Cleaned CSV for Bilise",
+        data=csv_export,
+        file_name=f'cleaned_batch_{datetime.now().strftime("%Y%m%d_%H%M")}.csv',
+        mime='text/csv',
+        help="Click to generate a clean CSV file for model training."
+    )
+    
+    st.divider()
+    st.success(f"Viewing processed data for: {', '.join(selected_banks)}")
+    st.dataframe(df_silver_filt.limit(30).toPandas(), use_container_width=True)
 
 with tab4:
-    st.header("Dead Letter Office (Quality Audit)")
+    st.header("🛑 Garbage / Rejected Records")
     if df_garbage:
-        st.warning("The following records were rejected due to schema mismatch or data quality issues:")
+        st.error(f"Identified {df_garbage.count()} records failing validation.")
         st.dataframe(df_garbage.toPandas(), use_container_width=True)
     else:
-        st.success("Quality Control: 0 records rejected. All data flows are healthy.")
+        st.success("No rejected records found in current batch.")

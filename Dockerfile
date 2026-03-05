@@ -1,20 +1,15 @@
-# Use lightweight Python image
 FROM python:3.11-slim
 
-# Set working directory
+# Install Java and 'procps' (fixes that 'ps: command not found' warning)
+RUN apt-get update && apt-get install -y default-jre procps && apt-get clean
+
 WORKDIR /app
 
-# Copy project files
-COPY . /app
-
-# Install dependencies
+# Copy requirements and install (Docker will CACHE this now)
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Ensure storage directories exist inside container
-RUN mkdir -p storage/bronze storage/silver storage/garbage storage/gold
+# Copy the rest of your code
+COPY . .
 
-# Set environment variable for Kafka (inside Docker network)
-ENV KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-
-# Default command: run the full pipeline
-CMD ["python", "-m", "pipelines.run_pipeline"]
+CMD ["streamlit", "run", "utils/dashboard.py", "--server.port", "8501", "--server.address", "0.0.0.0"]

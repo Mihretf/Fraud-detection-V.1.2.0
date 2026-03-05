@@ -134,7 +134,8 @@ services:
     command: python -m pipelines.run_pipeline
 
   dashboard:
-    image: spark:3.5.7-java17-python3
+    # image: spark:3.5.7-java17-python3
+    build: .
     container_name: fraud_dashboard
     volumes:
       - .:/app

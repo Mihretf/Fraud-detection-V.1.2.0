@@ -1,5 +1,7 @@
 pandas
-# pyspark
+pyspark==3.5.0
 kafka-python
 numpy
 confluent-kafka
+streamlit
+plotly
