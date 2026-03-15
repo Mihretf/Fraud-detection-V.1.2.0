@@ -9,13 +9,13 @@ spark = SparkSession.builder \
 spark.sparkContext.setLogLevel("WARN")
 
 # Kafka Configuration
-kafka_bootstrap_servers = "kafka_old:9093"
+kafka_bootstrap_servers = "kafka_old:9092"
 # Subscribing to all bank topics using a pattern
 raw_df = spark.readStream \
     .format("kafka") \
     .option("kafka.bootstrap.servers", kafka_bootstrap_servers) \
     .option("subscribePattern", "bank_.*_transactions") \
-    .option("startingOffsets", "latest") \
+    .option("startingOffsets", "earliest") \
     .load()
 
 # ---------------------------------------------------------
