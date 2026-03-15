@@ -11,7 +11,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 # BRONZE_DIR.mkdir(parents=True, exist_ok=True)
 
 # Kafka config
-KAFKA_BOOTSTRAP = "kafka:9092"
+KAFKA_BOOTSTRAP = "kafka:9093"
 TOPIC = "bank_a_mobile_transactions"
 
 class MobileProducer:

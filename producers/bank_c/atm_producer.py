@@ -3,7 +3,7 @@ from generators.transaction_generator import TransactionGenerator
 from datetime import datetime
 import json
 
-KAFKA_BOOTSTRAP = "kafka:9092"
+KAFKA_BOOTSTRAP = "kafka:9093"
 TOPIC = "bank_c_atm_transactions"
 
 class ATMProducerC:
