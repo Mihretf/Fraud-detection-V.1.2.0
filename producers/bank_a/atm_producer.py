@@ -5,7 +5,7 @@ from confluent_kafka import Producer
 from datetime import datetime
 from generators.transaction_generator import TransactionGenerator
 
-KAFKA_BOOTSTRAP = "kafka:9093"
+KAFKA_BOOTSTRAP = "localhost:9093"
 TOPIC = "bank_a_atm_transactions"
 
 # PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
