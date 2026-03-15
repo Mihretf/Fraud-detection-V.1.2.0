@@ -10,7 +10,7 @@ spark = SparkSession.builder \
 raw_bronze_df = spark.read \
     .format("parquet") \
     .schema(bronze_read_schema) \
-    .load("hdfs://namenode:8020/fraud_detection/bronze/transactions")
+    .load("hdfs://namenode:8020/projects/synthetic/bronze")
 
 # 2. PARSE THE JSON
 # Note: We use 'bronze_transaction_schema' to decode the 'raw_payload' column
@@ -64,13 +64,13 @@ final_silver.filter(col("quality_score") == "CLEAN") \
     .write \
     .mode("append") \
     .partitionBy("bank_id", "channel") \
-    .parquet("hdfs://namenode:8020/fraud_detection/silver/transactions")
+    .parquet("hdfs://namenode:8020/projects/synthetic/silver")
 
 print("Processing rejected transactions...")
 final_silver.filter(col("quality_score") != "CLEAN") \
     .write \
     .mode("append") \
-    .json("hdfs://namenode:8020/fraud_detection/garbage/rejected")
+    .json("hdfs://namenode:8020/projects/synthetic/garbage/rejected")
 
 
 

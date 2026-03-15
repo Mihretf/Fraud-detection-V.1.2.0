@@ -34,8 +34,8 @@ bronze_df = raw_df.selectExpr(
 # Write to HDFS Bronze
 query = bronze_df.writeStream \
     .format("parquet") \
-    .option("path", "hdfs://namenode:8020/fraud_detection/bronze/transactions") \
-    .option("checkpointLocation", "hdfs://namenode:8020/fraud_detection/checkpoints/bronze") \
+    .option("path", "hdfs://namenode:8020/projects/synthetic/bronze") \
+    .option("checkpointLocation", "hdfs://namenode:8020/projects/synthetic/checkpoints") \
     .outputMode("append") \
     .trigger(processingTime="5 seconds") \
     .start()
