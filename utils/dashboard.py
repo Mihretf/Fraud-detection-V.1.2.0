@@ -21,14 +21,14 @@ from pyspark.sql.functions import col, max as spark_max
 # --- 2. STREAMLIT UI CONFIG ---
 st.set_page_config(layout="wide", page_title="AAU Fraud Pipeline Monitor")
 st.title("🛡️ Real-Time Fraud Pipeline Monitor")
-st.markdown(f"**Status:** `Active` | **Node:** `AAU-Data-Cluster` | **Engineer:** Barnabas")
+st.markdown(f"**Status:** `Active` | **Node:** `-Data-Cluster` | **Engineer:** Mihret")
 st.markdown("---")
 
 # --- 3. SPARK SESSION INITIALIZATION ---
 @st.cache_resource
 def get_spark():
     return SparkSession.builder \
-        .appName("Dashboard") \
+        .appName("Synthetic_Dashboard") \
         .config("spark.jars.packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0") \
         .getOrCreate()
 
@@ -37,11 +37,11 @@ spark = get_spark()
 # --- 4. DATA LOADING LOGIC ---
 def load_data():
     try:
-        bronze = spark.read.parquet("hdfs://namenode:8020/fraud_detection/bronze/transactions")
-        silver = spark.read.parquet("hdfs://namenode:8020/fraud_detection/silver/transactions")
+        bronze = spark.read.parquet("hdfs://namenode:8020/projects/synthetic/bronze")
+        silver = spark.read.parquet("hdfs://namenode:8020/projects/synthetic/silver/")
         
         try:
-            garbage = spark.read.json("hdfs://namenode:8020/fraud_detection/garbage/rejected")
+            garbage = spark.read.json("hdfs://namenode:8020/projects/synthetic/garbage/rejected")
         except:
             garbage = None 
             
@@ -107,7 +107,7 @@ with tab1:
 
 with tab2:
     st.header("Bronze Layer: Raw Ingestion")
-    st.info("Direct Parquet read from `hdfs:///fraud_detection/bronze`")
+    st.info("Direct Parquet read from `hdfs:///projects/synthetic/bronze`")
     st.dataframe(df_bronze.limit(20).toPandas(), use_container_width=True)
 
 with tab3:

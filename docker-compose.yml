@@ -1,27 +1,28 @@
 version: '3.8'
 services:
   # --- INFRASTRUCTURE: ZOOKEEPER & KAFKA ---
-  zookeeper:
+  zookeeper_old:
     image: confluentinc/cp-zookeeper:7.6.0
-    container_name: zookeeper
+    container_name: zookeeper_old
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     ports:
-      - "2181:2181"
+      - "2182:2181"
 
-  kafka:
+  kafka_old:
     image: confluentinc/cp-kafka:7.6.0
-    container_name: kafka
+    container_name: kafka_old
     depends_on:
-      - zookeeper
+      - zookeeper_old
     ports:
-      - "9092:9092"
+      - "9093:9092"
     environment:
       KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_LISTENERS: PLAINTEXT://:9092
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper_old:2181
+      KAFKA_LISTENERS: PLAINTEXT://kafka_old:9092,PLAINTEXT_HOST://localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
 
   # --- STORAGE: HDFS ---
@@ -49,56 +50,57 @@ services:
       - "9864:9864"
 
   # --- PROCESSING: SPARK ---
-  spark:
+  spark_old:
     image: spark:3.5.7-java17-python3
-    container_name: spark
+    container_name: spark_old
     user: root
     environment:
       - SPARK_MODE=master
     ports:
-      - "8081:8080" 
-      - "7077:7077"
+      - "8083:8080" 
+      - "7078:7077"
     volumes:
       - ./spark_jobs:/app/spark_jobs
-    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master --host spark
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master --host spark_old
 
-  spark-worker:
+  spark-worker_old:
     image: spark:3.5.7-java17-python3
     depends_on:
-      - spark
+      - spark_old
+    container_name: spark_worker_old
     environment:
       - SPARK_MODE=worker
-      - SPARK_MASTER_URL=spark://spark:7077
+      - SPARK_MASTER_URL=spark://spark_old:7077
       - SPARK_WORKER_CORES=2
       - SPARK_WORKER_MEMORY=2G
     volumes:
       - ./spark_jobs:/app/spark_jobs
-    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark:7077
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark_old:7077
 
   # --- ORCHESTRATION: AIRFLOW ---
-  airflow-db:
+  airflow-db_old:
     image: postgres:13
-    container_name: airflow_postgres
+    container_name: airflow_postgres_old
     environment:
       - POSTGRES_USER=airflow
       - POSTGRES_PASSWORD=airflow
       - POSTGRES_DB=airflow
     ports:
-      - "5432:5432"
+      - "5433:5432"
 
   airflow-webserver:
     build:
       context: .
       dockerfile: Dockerfile.airflow
-    container_name: airflow_webserver
+    container_name: airflow_webserver_old
     depends_on:
-      - airflow-db
+      - airflow-db_old
     environment:
-      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-db_old:5432/airflow
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
     ports:
-      - "8080:8080"
+      - "8082:8080"
     volumes:
       - ./dags:/opt/airflow/dags
       - ./spark_jobs:/opt/airflow/jobs    
@@ -111,11 +113,11 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.airflow
-    container_name: airflow_scheduler
+    container_name: airflow_scheduler_old
     depends_on:
       - airflow-webserver
     environment:
-      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-db_old:5432/airflow
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
     volumes:
       - ./dags:/opt/airflow/dags
@@ -125,22 +127,25 @@ services:
   # --- DASHBOARD & PIPELINES ---
   fraud_pipeline:
     build: .
-    container_name: fraud_pipeline
+    container_name: fraud_pipeline_old
     depends_on:
-      - kafka
+      - kafka_old
     volumes:
       - ./storage:/app/storage
       - ./:/app
+    environment:
+      - KAFKA_SERVER=kafka_old:9092
     command: python -m pipelines.run_pipeline
 
-  dashboard:
+  dashboard_old:
     # image: spark:3.5.7-java17-python3
     build: .
-    container_name: fraud_dashboard
+    container_name: dashboard_old
     volumes:
       - .:/app
+      - ./storage:/app/storage
     ports:
-      - "8501:8501"
+      - "8502:8501"
     environment:
-      - SPARK_MASTER=spark://spark:7077
-    command: tail -f /dev/null
+      - SPARK_MASTER=spark://spark_old:7077
+    command: streamlit run utils/dashboard.py --server.port=8501 --server.address=0.0.0.0
