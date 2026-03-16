@@ -4,10 +4,16 @@ from pyspark.sql.functions import col
 # Initialize Spark Session
 spark = SparkSession.builder \
     .appName("KafkaToHDFS_Bronze_Ingestor") \
+    .master("local[*]") \
     .getOrCreate()
 
 spark.sparkContext.setLogLevel("WARN")
 
+df = spark.readStream \
+    .format("kafka") \
+    .option("kafka.bootstrap.servers", "kafka_old:9092") \
+    .option("subscribe", "your_topic_name") \
+    .load()
 # Kafka Configuration
 kafka_bootstrap_servers = "kafka_old:9092"
 # Subscribing to all bank topics using a pattern
@@ -32,12 +38,17 @@ bronze_df = raw_df.selectExpr(
 )
 
 # Write to HDFS Bronze
-query = bronze_df.writeStream \
-    .format("parquet") \
-    .option("path", "hdfs://namenode:8020/projects/synthetic/bronze") \
-    .option("checkpointLocation", "hdfs://namenode:8020/projects/synthetic/checkpoints") \
+# query = bronze_df.writeStream \
+#     .format("parquet") \
+#     .option("path", "hdfs://172.21.0.3:8020/projects/synthetic/bronze") \
+#     .option("checkpointLocation", "hdfs://172.21.0.3:8020/projects/synthetic/checkpoint_v_NEW_TEST2") \
+#     .outputMode("append") \
+#     .trigger(processingTime="5 seconds") \
+#     .start()
+
+query = df.writeStream \
     .outputMode("append") \
-    .trigger(processingTime="5 seconds") \
+    .format("console") \
     .start()
 
 query.awaitTermination()
