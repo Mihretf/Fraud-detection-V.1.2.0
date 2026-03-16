@@ -52,9 +52,10 @@ services:
     #   - "9864:9864"
 
   # --- PROCESSING: SPARK ---
-  spark_old:
+  # --- PROCESSING: SPARK ---
+  spark-master-old:  # Changed from spark_old
     image: spark:3.5.7-java17-python3
-    container_name: spark_old
+    container_name: spark_master_old # Hyphens are safer here too
     user: root
     environment:
       - SPARK_MODE=master
@@ -63,21 +64,21 @@ services:
       - "7078:7077"
     volumes:
       - ./spark_jobs:/app/spark_jobs
-    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master --host spark_old
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master --host spark-master-old
 
-  spark-worker_old:
+  spark-worker-old:
     image: spark:3.5.7-java17-python3
-    depends_on:
-      - spark_old
     container_name: spark_worker_old
+    depends_on:
+      - spark-master-old
     environment:
       - SPARK_MODE=worker
-      - SPARK_MASTER_URL=spark://spark_old:7077
+      - SPARK_MASTER_URL=spark://spark-master-old:7077
       - SPARK_WORKER_CORES=2
       - SPARK_WORKER_MEMORY=2G
     volumes:
       - ./spark_jobs:/app/spark_jobs
-    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark_old:7077
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master-old:7077
 
   # --- ORCHESTRATION: AIRFLOW ---
   airflow-db_old:
