@@ -1,33 +1,24 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col
 
-# Initialize Spark Session
 spark = SparkSession.builder \
-    .appName("KafkaToHDFS_Bronze_Ingestor") \
+    .appName("Full_Bank_Bronze_Ingestor") \
     .master("local[*]") \
     .getOrCreate()
 
 spark.sparkContext.setLogLevel("WARN")
 
-df = spark.readStream \
-    .format("kafka") \
-    .option("kafka.bootstrap.servers", "kafka_old:9092") \
-    .option("subscribe", "your_topic_name") \
-    .load()
-# Kafka Configuration
-kafka_bootstrap_servers = "kafka_old:9092"
-# Subscribing to all bank topics using a pattern
+# ---------------------------------------------------------
+# READ FROM ALL TOPICS
+# ---------------------------------------------------------
 raw_df = spark.readStream \
     .format("kafka") \
-    .option("kafka.bootstrap.servers", kafka_bootstrap_servers) \
+    .option("kafka.bootstrap.servers", "kafka_old:9092") \
     .option("subscribePattern", "bank_.*_transactions") \
     .option("startingOffsets", "earliest") \
     .load()
 
-# ---------------------------------------------------------
-# THE FIX: Keep it RAW. 
-# We save the 'value' as a string so Silver can parse it later.
-# ---------------------------------------------------------
+# Transformation remains the same for Bronze (Raw storage)
 bronze_df = raw_df.selectExpr(
     "CAST(key AS STRING)", 
     "CAST(value AS STRING) as raw_payload", 
@@ -37,18 +28,22 @@ bronze_df = raw_df.selectExpr(
     "timestamp as ingest_time"
 )
 
-# Write to HDFS Bronze
-# query = bronze_df.writeStream \
-#     .format("parquet") \
-#     .option("path", "hdfs://172.21.0.3:8020/projects/synthetic/bronze") \
-#     .option("checkpointLocation", "hdfs://172.21.0.3:8020/projects/synthetic/checkpoint_v_NEW_TEST2") \
-#     .outputMode("append") \
-#     .trigger(processingTime="5 seconds") \
-#     .start()
-
-query = df.writeStream \
+# ---------------------------------------------------------
+# WRITE TO HDFS (The Medallion Foundation)
+# ---------------------------------------------------------
+hdfs_query = bronze_df.writeStream \
+    .format("parquet") \
+    .option("path", "hdfs://namenode:8020/projects/synthetic/bronze") \
+    .option("checkpointLocation", "hdfs://namenode:8020/projects/synthetic/checkpoint_v_NEW_TEST2") \
     .outputMode("append") \
-    .format("console") \
+    .trigger(processingTime="10 seconds") \
     .start()
 
-query.awaitTermination()
+# Optional: Keep console output to verify the multi-topic flow
+console_query = bronze_df.writeStream \
+    .format("console") \
+    .option("truncate", "false") \
+    .trigger(processingTime="10 seconds") \
+    .start()
+
+spark.streams.awaitAnyTermination()
